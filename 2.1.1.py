@@ -42,11 +42,11 @@ class DataSet:
     def csv_reader(self):
         with open(self.file_name, mode='r', encoding='utf-8-sig') as file:
             reader = csv.reader(file)
-            header = next(reader)
-            header_length = len(header)
+            head = next(reader)
+            header_length = len(head)
             for row in reader:
                 if '' not in row and len(row) == header_length:
-                    yield dict(zip(header, row))
+                    yield dict(zip(head, row))
 
     def get_statistic(self):
         salary = {}
