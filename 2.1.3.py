@@ -8,51 +8,121 @@ from jinja2 import Environment, FileSystemLoader
 import pathlib
 import pdfkit
 
+class InputConnect:
+    def __init__(self):
+        """
+        Конструктор который создает локальные переменные file_name и vacancy_name в которых сохраняется название файла
+        и название профессии
+        в reporter сохраняются 6 видов статистик
+        """
+        self.file_name = input('Введите название файла: ')
+        self.vacancy_name = input('Введите название профессии: ')
 
-class Vacancy:
-    currency_to_rub = {
-        "AZN": 35.68, "BYR": 23.91, "EUR": 59.90, "GEL": 21.74, "KGS": 0.76,
-        "KZT": 0.13, "RUR": 1, "UAH": 1.64, "USD": 60.66, "UZS": 0.0055,
-    }
+        dataset = DataSet(self.file_name, self.vacancy_name)
+        stats1, stats2, stats3, stats4, stats5, stats6 = dataset.get_statistic()
+        dataset.print_statistic(stats1, stats2, stats3, stats4, stats5, stats6)
 
-    def __init__(self, vacancy):
-        self.name = vacancy['name']
-        self.salary_from = int(float(vacancy['salary_from']))
-        self.salary_to = int(float(vacancy['salary_to']))
-        self.salary_currency = vacancy['salary_currency']
-        self.salary_average = self.currency_to_rub[self.salary_currency] * (self.salary_from + self.salary_to) / 2
-        self.area_name = vacancy['area_name']
-        self.year = int(vacancy['published_at'][:4])
+        self.reporter(stats1, stats2, stats3, stats4, stats5, stats6)
 
+    def reporter(self, stats1, stats2, stats3, stats4, stats5, stats6):
+        """
+
+        :param stats1: stats1
+        :param stats2: stats2
+        :param stats3: stats3
+        :param stats4: stats4
+        :param stats5: stats5
+        :param stats6: stats6
+        :return: генерирует файлы в формете excel, pdg, img
+        """
+        report = Report(self.vacancy_name, stats1, stats2, stats3, stats4, stats5, stats6)
+        report.generate_excel()
+        report.generate_image()
+        report.generate_pdf()
 
 class DataSet:
+    """Класс хранилища данных о вакансиях.
+        Attributes
+        ----------
+        file_name : str
+            Название файла, введенное пользователем.
+        vacancy_name : str
+            Профессия введенная пользователем
+        averagevalues : dictionary
+            Метод для находа средних значений
+        increment : dictionary, key, amount
+            Прирост
+        average : dictionary
+            Метод которй находит среднее значение с помощью метода averagevalues
+        increments : amount, dictionary, key
+            Приращения
+        csv_reader :
+            Метод который открывает и читает csv-файл, разделяет на список имен и вакансий
+        get_statistic :
+            Метод который возвращает stats, vacancies_number, stats2, vacancies_number_by_name, stats3, stats5
+        statistics : count_of_vacancies, salary, salary_city, salary_of_vacancy_name
+            Возвращает stats, stats2, stats3, stats5
+        countervacancies : count_of_vacancies, salary, salary_city, salary_of_vacancy_name
+            Метод для подсчета вакансий
+        statisticvalues:
+            Метод которй возвращает count_of_vacancies, salary, salary_city, salary_of_vacancy_name для метода подсчета вакансий
+        print_statistic: stats1, stats2, stats3, stats4, stats5, stats6 принимает все статистики
+            Метод который выводит статистики
+        """
     def __init__(self, file_name, vacancy_name):
+        """
+
+        :param file_name: создаем локальную переменную file_name
+        :param vacancy_name: создаем локальную переменную vacancy_name
+        """
         self.file_name = file_name
         self.vacancy_name = vacancy_name
 
     @staticmethod
+    def averagevalues(dictionary):
+        """
+        Метод для подсчета средних значений
+        :param dictionary:
+        :return: new_dictionary
+        """
+        new_dictionary = {}
+        for key, values in dictionary.items():
+            new_dictionary[key] = int(sum(values) / len(values))
+        return
+    @staticmethod
     def increment(dictionary, key, amount):
+        """
+        :param dictionary: dictionary
+        :param key: key
+        :param amount: amount
+        :return: DataSet.increments(amount, dictionary, key)
+        """
         DataSet.increments(amount, dictionary, key)
+    @staticmethod
+    def average(dictionary):
+        """
 
+        :param dictionary: dictionary
+        :return: DataSet.averagevalues(dictionary)
+        """
+        return DataSet.averagevalues(dictionary)
     @staticmethod
     def increments(amount, dictionary, key):
+        """
+        :param amount: amount
+        :param dictionary: dictionary
+        :param key: key
+        :return: Возвращает приращения
+        """
         if key in dictionary:
             dictionary[key] += amount
         else:
             dictionary[key] = amount
-
-    @staticmethod
-    def average(dictionary):
-        return DataSet.averagevalues(dictionary)
-
-    @staticmethod
-    def averagevalues(dictionary):
-        new_dictionary = {}
-        for key, values in dictionary.items():
-            new_dictionary[key] = int(sum(values) / len(values))
-        return new_dictionary
-
     def csv_reader(self):
+        """
+
+        :return: Читает и Вовзращает почищенный файл в формате csv
+        """
         with open(self.file_name, mode='r', encoding='utf-8-sig') as file:
             reader = csv.reader(file)
             header = next(reader)
@@ -62,6 +132,10 @@ class DataSet:
                     yield dict(zip(header, row))
 
     def get_statistic(self):
+        """
+
+        :return: stats, vacancies_number, stats2, vacancies_number_by_name, stats3, stats5
+        """
         count_of_vacancies, salary, salary_city, salary_of_vacancy_name = self.statisticvalues()
 
         count_of_vacancies = self.countervacancies(count_of_vacancies, salary, salary_city, salary_of_vacancy_name)
@@ -78,6 +152,14 @@ class DataSet:
         return stats, vacancies_number, stats2, vacancies_number_by_name, stats3, stats5
 
     def statistics(self, count_of_vacancies, salary, salary_city, salary_of_vacancy_name):
+        """
+
+        :param count_of_vacancies: Счетчик вакансий который берется из метода countervacancies
+        :param salary: stats
+        :param salary_city: stats3
+        :param salary_of_vacancy_name: stats2
+        :return: stats, stats2, stats3, stats5
+        """
         stats = self.average(salary)
         stats2 = self.average(salary_of_vacancy_name)
         stats3 = self.average(salary_city)
@@ -95,6 +177,15 @@ class DataSet:
         return stats, stats2, stats3, stats5
 
     def countervacancies(self, count_of_vacancies, salary, salary_city, salary_of_vacancy_name):
+        """
+
+        :param count_of_vacancies:
+        :param salary:
+        :param salary_city:
+        :param salary_of_vacancy_name:
+        :return: count_of_vacancies
+        Считает вакансии который удовлетворяют всем требованиям
+        """
         for vacancy_dictionary in self.csv_reader():
             vacancy = Vacancy(vacancy_dictionary)
             self.increment(salary, vacancy.year, [vacancy.salary_average])
@@ -105,6 +196,10 @@ class DataSet:
         return count_of_vacancies
 
     def statisticvalues(self):
+        """
+
+        :return: count_of_vacancies, salary, salary_city, salary_of_vacancy_name
+        """
         salary = {}
         salary_of_vacancy_name = {}
         salary_city = {}
@@ -113,6 +208,23 @@ class DataSet:
 
     @staticmethod
     def print_statistic(stats1, stats2, stats3, stats4, stats5, stats6):
+        """
+
+        :param stats1: stats1
+        :param stats2: stats2
+        :param stats3: stats3
+        :param stats4: stats4
+        :param stats5: stats5
+        :param stats6: stats6
+        :return: Выводит:
+                    Динамика уровня зарплат по годам
+                    Динамика количества вакансий по годам
+                    Динамика уровня зарплат по годам для выбранной профессии
+                    Динамика количества вакансий по годам для выбранной профессии
+                    Уровень зарплат по городам (в порядке убывания)
+                    Доля вакансий по городам (в порядке убывания)
+                    и соответствующие статистики только форматированные
+        """
         print('Динамика уровня зарплат по годам: {0}'.format(stats1))
         print('Динамика количества вакансий по годам: {0}'.format(stats2))
         print('Динамика уровня зарплат по годам для выбранной профессии: {0}'.format(stats3))
@@ -120,29 +232,66 @@ class DataSet:
         print('Уровень зарплат по городам (в порядке убывания): {0}'.format(stats5))
         print('Доля вакансий по городам (в порядке убывания): {0}'.format(stats6))
 
+class Vacancy:
+    """Класс вакансии используется для обработки данных о вакансиях из CSV-файлов.
+        Attributes
+        ----------
+        name : str
+            Название вакансии
+        salary_from : Salary
+            Нижняя граница вилки
+        salary_to : Salary
+            Верхняя граница вилки
+        salary_currency: str
+            Валюта оклада
+        salary_average: salary
+            Сумма оклада конвертируемая в рублях по заданному курсу в среднем значении
+        area_name : str
+            Название населённого пункта
+        year : int
+            Время публикации в формате - год.
+    """
 
-class InputConnect:
-    def __init__(self):
-        self.file_name = input('Введите название файла: ')
-        self.vacancy_name = input('Введите название профессии: ')
-        # self.file_name = '../data/vacancies_by_year.csv'
-        # self.vacancy_name = 'Программист'
+    """
+    Данный нам список валют и их курс
+    """
+    currency_to_rub = {
+        "AZN": 35.68, "BYR": 23.91, "EUR": 59.90, "GEL": 21.74, "KGS": 0.76,
+        "KZT": 0.13, "RUR": 1, "UAH": 1.64, "USD": 60.66, "UZS": 0.0055,
+    }
 
-        dataset = DataSet(self.file_name, self.vacancy_name)
-        stats1, stats2, stats3, stats4, stats5, stats6 = dataset.get_statistic()
-        dataset.print_statistic(stats1, stats2, stats3, stats4, stats5, stats6)
-
-        self.reporter(stats1, stats2, stats3, stats4, stats5, stats6)
-
-    def reporter(self, stats1, stats2, stats3, stats4, stats5, stats6):
-        report = Report(self.vacancy_name, stats1, stats2, stats3, stats4, stats5, stats6)
-        report.generate_excel()
-        report.generate_image()
-        report.generate_pdf()
+    def __init__(self, vacancy):
+        """
+        Инициализирует класс вакансии, используя переданные поля
+        :param vacancy:
+        Словарь с полями вакансии. Доступные ключи - name, salary_from, salary_to, salary_currency,
+        area_name, published_at
+        """
+        self.name = vacancy['name']
+        self.salary_from = int(float(vacancy['salary_from']))
+        self.salary_to = int(float(vacancy['salary_to']))
+        self.salary_currency = vacancy['salary_currency']
+        self.salary_average = self.currency_to_rub[self.salary_currency] * (self.salary_from + self.salary_to) / 2
+        self.area_name = vacancy['area_name']
+        self.year = int(vacancy['published_at'][:4])
 
 
 class Report:
+    """
+    Класс для генерации репорта
+    """
     def __init__(self, vacancy_name, stats1, stats2, stats3, stats4, stats5, stats6):
+        """
+        Метод инициализируешь данные параметры
+        :param vacancy_name: vacancy_name
+        :param stats1: stats1
+        :param stats2: stats2
+        :param stats3: stats3
+        :param stats4: stats4
+        :param stats5: stats5
+        :param stats6: stats6
+        Различные статистические параметры и список имен вакансий
+        """
         self.wb = Workbook()
         self.vacancy_name = vacancy_name
         self.stats1 = stats1
@@ -153,6 +302,10 @@ class Report:
         self.stats6 = stats6
 
     def generate_excel(self):
+        """
+        Метод генерации файла в формате excel
+        :return: report.xlsx
+        """
         ws1 = self.wb.active
         ws1.title = 'Статистика по годам'
         ws1.append(['Год', 'Средняя зарплата', 'Средняя зарплата - ' + self.vacancy_name, 'Количество вакансий', 'Количество вакансий - ' + self.vacancy_name])
@@ -214,6 +367,10 @@ class Report:
         self.wb.save(filename='report.xlsx')
 
     def generate_image(self):
+        """
+        Метод генерации изображения
+        :return: graph.png
+        """
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2)
 
         bar1 = ax1.bar(np.array(list(self.stats1.keys())) - 0.4, self.stats1.values(), width=0.4)
@@ -248,6 +405,10 @@ class Report:
         plt.savefig('graph.png')
 
     def generate_pdf(self):
+        """
+        Метод генерации pdf-файла
+        :return: report.pdf
+        """
         env = Environment(loader=FileSystemLoader('../templates'))
         template = env.get_template("pdf_template.html")
         stats = []
@@ -258,9 +419,8 @@ class Report:
             self.stats6[key] = round(self.stats6[key] * 100, 2)
 
         pdf_template = template.render({'name': self.vacancy_name, 'path': '{0}/{1}'.format(pathlib.Path(__file__).parent.resolve(), 'graph.png'), 'stats': stats, 'stats5': self.stats5, 'stats6': self.stats6})
-
-         #config = pdfkit.configuration(wkhtmltopdf=r'/usr/bin/wkhtmltopdf')
-         #pdfkit.from_string(pdf_template, 'report.pdf', configuration=config, options={"enable-local-file-access": ""})
+        #config = pdfkit.configuration(wkhtmltopdf=r'/usr/bin/wkhtmltopdf')
+        #pdfkit.from_string(pdf_template, 'report.pdf', configuration=config, options={"enable-local-file-access": ""})
         pdfkit.from_string(pdf_template, 'report.pdf', options={"enable-local-file-access": ""})
 
 
